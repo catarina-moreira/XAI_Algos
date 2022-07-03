@@ -1,21 +1,12 @@
 net
 {
-	rcenginegenerator1317510038576835557L = "edu.ucla.belief.inference.RCSettings@45c7c158";
+	rcenginegenerator1317510038576835557L = "edu.ucla.belief.inference.RCSettings@2bbe3ecb";
 }
 
-node X1
-{
-	states = ("true" "false" );
-	position = (46 -72);
-	ismapvariable = "false";
-	label = "X1";
-	diagnosistype = "AUXILIARY";
-	excludepolicy = "include whole CPT";
-}
 node Y
 {
 	states = ("true" "false" );
-	position = (100 21);
+	position = (252 -161);
 	ismapvariable = "false";
 	label = "Y";
 	diagnosistype = "AUXILIARY";
@@ -24,7 +15,7 @@ node Y
 node X2
 {
 	states = ("true" "false" );
-	position = (169 -72);
+	position = (335 -79);
 	ismapvariable = "false";
 	label = "X2";
 	diagnosistype = "AUXILIARY";
@@ -33,27 +24,37 @@ node X2
 node X3
 {
 	states = ("true" "false" );
-	position = (-130 27);
+	position = (-27 -147);
 	ismapvariable = "false";
 	label = "X3";
 	diagnosistype = "AUXILIARY";
 	excludepolicy = "include whole CPT";
 }
-potential ( X1 | Y )
+node X1
 {
-	data = ((	0.8	0.2	)
-		(	0.3	0.7	));
+	states = ("true" "false" );
+	position = (125 -78);
+	ismapvariable = "false";
+	label = "X1";
+	diagnosistype = "AUXILIARY";
+	excludepolicy = "include whole CPT";
 }
-potential ( Y | )
+potential ( Y | X1 X2 )
 {
-	data = (	0.5	0.5	);
+	data = (((	0.7	0.3	)
+		(	0.2	0.8	))
+		((	0.8	0.2	)
+		(	0.5	0.5	)));
 }
-potential ( X2 | Y )
+potential ( X2 | )
 {
-	data = ((	0.4	0.6	)
-		(	0.25	0.75	));
+	data = (	0.6	0.4	);
 }
 potential ( X3 | )
 {
 	data = (	0.7	0.3	);
+}
+potential ( X1 | )
+{
+	data = (	0.5	0.5	);
 }
