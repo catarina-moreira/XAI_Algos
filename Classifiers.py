@@ -59,8 +59,14 @@ class Classifier:
                                     subsample = subsample, early_stopping = early_stopping )
         
         if self.clf_name == "Bayesian Network":
-            print("Selected BN")
-            clf = self.applyBN(save_model=save_model, learningMethod=learningMethod, prior=prior, priorWeight=priorWeight, discretizationNbBins=discretizationNbBins, discretizationStrategy=discretizationStrategy,usePR=usePR)
+            clf = self.applyBN(save_model=save_model, learningMethod=learningMethod, prior=prior, 
+                                priorWeight=priorWeight, discretizationNbBins=discretizationNbBins, 
+                                discretizationStrategy=discretizationStrategy,usePR=usePR)
+        
+        if self.clf_name == "Neural Network":
+            pass
+        
+        
         return clf
             
     def applyBN(self, save_model=True, learningMethod='MIIC', prior='Smoothing', priorWeight=1, discretizationNbBins=4, discretizationStrategy="kmeans",usePR=False ):
