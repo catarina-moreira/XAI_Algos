@@ -24,9 +24,11 @@ class Classifier:
 
     SUPPORTED_CLFS = ["XGBoost", "Neural Network", "Bayesian Network"]
 
-    def __init__(self, clf_name : str, dataset_name : str, dataset : pd.DataFrame , class_var : str):
+    def __init__(self, load_model : bool, clf_name : str, dataset_name : str, dataset : pd.DataFrame , class_var : str):
 
         self.clf_name = clf_name
+        self.clf = None       
+        self.predictions = None 
         self.dataset = dataset
         self.dataset_name = dataset_name
         self.class_var = class_var
@@ -50,6 +52,13 @@ class Classifier:
         self.X_val = X_val
         self.Y_val = Y_val
 
+        # load a pretrained model
+        if load_model:
+            self.clf = self.load_pretrained_model()
+
+    def load_pretrained_model( ):
+        
+
     def applyClassifer(self, save_model = True, learning_rate=0.01, max_depth=5, 
                         n_estimators=200, min_child_weight = 10, subsample = 0.8, early_stopping = 10, 
                         learningMethod='MIIC', prior='Smoothing', priorWeight=1, discretizationNbBins=4,
@@ -66,7 +75,7 @@ class Classifier:
         if self.clf_name == "Bayesian Network":
             clf = self.applyBN(save_model=save_model, learningMethod=learningMethod, prior=prior, 
                                 priorWeight=priorWeight, discretizationNbBins=discretizationNbBins, 
-                                discretizationStrategy=discretizationStrategy,usePR=usePR, act_fn = act_fn)
+                                discretizationStrategy=discretizationStrategy,usePR=usePR)
         
         if self.clf_name == "Neural Network":
             clf = self.applyNN(save_model=save_model, act_fn=act_fn, batch_size=batch_size, epochs=epochs, learning_rate=learning_rate)
@@ -77,20 +86,20 @@ class Classifier:
     def applyNN(self,save_model, act_fn, batch_size, epochs, learning_rate):
         
         # define model
-        nn = self.create_nn_arch(act_fn)
+        self.clf = self.create_nn_arch(act_fn)
 
         # train
-        nn.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=learning_rate), loss="binary_crossentropy", metrics=["accuracy"])
-        self.history = nn.fit(self.X_train, self.Y_train, epochs=epochs, batch_size=batch_size, validation_data=(self.X_val, self.Y_val), verbose=1)
+        self.clf.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=learning_rate), loss="binary_crossentropy", metrics=["accuracy"])
+        self.history = self.clf.fit(self.X_train, self.Y_train, epochs=epochs, batch_size=batch_size, validation_data=(self.X_val, self.Y_val), verbose=1)
 
         # evaluate model
-        self.evaluate_model(nn)
+        self.evaluate_model( )
 
         # save model
         if save_model:
-            nn.save(os.path.join(".","models", "NN_" + self.dataset_name + ".json"))
+            self.clf.save(os.path.join(".","models", "NN_" + self.dataset_name + ".json"))
         
-        return nn
+        return self.clf
 
     def create_nn_arch(self, act_fn):
         nn = tf.keras.Sequential()
@@ -107,16 +116,16 @@ class Classifier:
     #
     def applyBN(self, save_model=True, learningMethod='MIIC', prior='Smoothing', priorWeight=1, discretizationNbBins=4, discretizationStrategy="kmeans",usePR=False ):
         
-        bnc = BNClassifier(learningMethod=learningMethod, prior=prior, priorWeight=priorWeight, discretizationNbBins=discretizationNbBins, discretizationStrategy=discretizationStrategy,usePR=usePR)
-        bnc.fit(self.X_train, self.Y_train)
-
+        self.clf = BNClassifier(learningMethod=learningMethod, prior=prior, priorWeight=priorWeight, discretizationNbBins=discretizationNbBins, discretizationStrategy=discretizationStrategy,usePR=usePR)
+        self.clf.fit(self.X_train, self.Y_train)
+        
         # evaluate model
-        self.evaluate_model(bnc)
+        self.evaluate_model( )
 
         if save_model:
-            gum.saveBN(bnc.bn, os.path.join(".","models", "BNC_" + self.dataset_name + ".net"))
+            gum.saveBN(self.clf.bn, os.path.join(".","models", "BNC_" + self.dataset_name + ".net"))
         
-        return bnc
+        return self.clf
 
     ########################################################
     # XGBOOST CLASSIFER
@@ -125,26 +134,27 @@ class Classifier:
                       min_child_weight = 10, subsample = 0.8, early_stopping = 10 ):
 
         # apply classifier
-        xgb = XGBClassifier(objective ='multi:softmax', num_class = 2, learning_rate = learning_rate, max_depth = max_depth,
+        self.clf = XGBClassifier(objective ='multi:softmax', num_class = 2, learning_rate = learning_rate, max_depth = max_depth,
                             n_estimators = n_estimators, min_child_weight = min_child_weight, subsample = subsample,
                             early_stopping_rounds = early_stopping)
-        xgb.fit(self.X_train, self.Y_train, eval_set=[(self.X_train, self.Y_train), (self.X_val, self.Y_val)], verbose=True)
+        self.clf.fit(self.X_train, self.Y_train, eval_set=[(self.X_train, self.Y_train), (self.X_val, self.Y_val)], verbose=True)
 
         # evaluate the model
-        self.evaluate_model(xgb)
+        self.evaluate_model( )
 
         # save model
         if save_model:
-            xgb.save_model(os.path.join(".","models", "XGB_" + self.dataset_name + ".json"))
+            self.clf.save_model(os.path.join(".","models", "XGB_" + self.dataset_name + ".json"))
 
-        return xgb
+        return self.clf
 
-    def evaluate_model(self, clf):
+    def evaluate_model(self):
         
-        Y_pred = clf.predict(self.X_test)
+        Y_pred = self.clf.predict(self.X_test)
 
         if self.clf_name == "Neural Network":
-            Y_pred = np.argmax(Y_pred)
+            Y_pred = list(map( np.argmax, Y_pred ))
+            self.Y_test = list(map( np.argmax, self.Y_test))
 
         self.clf_results["predictions"] = Y_pred
 
@@ -185,6 +195,16 @@ class Classifier:
     ##################################################
     # GETTERS
     #################################################
+    
+    def getPredictions(self):
+        return self.predictions
+
+    def getFeatureNames(self):
+        return self.feature_names
+
+    def getClassVar(self):
+        return self.class_var
+
     def getHistory(self):
         return self.history
 
@@ -199,6 +219,9 @@ class Classifier:
 
     def getValidationData(self):
         return self.X_val, self.Y_val
+
+    def getClassifier(self):
+        return self.clf
 
     def getClfName(self):
         return self.clf_name
