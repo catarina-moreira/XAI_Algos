@@ -13,6 +13,8 @@ from tensorflow import keras
 from tensorflow.keras import layers
 from keras.utils.np_utils import to_categorical
 
+import pickle
+
 from xgboost import XGBClassifier
 
 from sklearn.model_selection import train_test_split
@@ -20,7 +22,7 @@ from sklearn.metrics import accuracy_score, precision_score
 from sklearn.metrics import recall_score, f1_score, confusion_matrix
 
 # for binary classification only
-class Classifier:
+class ClassifierWrapper:
 
     SUPPORTED_CLFS = ["XGBoost", "Neural Network", "Bayesian Network"]
 
@@ -57,6 +59,7 @@ class Classifier:
             self.clf = self.load_pretrained_model()
 
     def load_pretrained_model( ):
+        pass
         
 
     def applyClassifer(self, save_model = True, learning_rate=0.01, max_depth=5, 
@@ -67,16 +70,7 @@ class Classifier:
         clf = None
         self.errorClassifierNotFOund() if self.clf_name not in self.SUPPORTED_CLFS else ""
 
-        if self.clf_name == "XGBoost":
-           clf = self.applyXGBoost( save_model = save_model, learning_rate=learning_rate, max_depth=max_depth, 
-                                    n_estimators=n_estimators,  min_child_weight = min_child_weight, 
-                                    subsample = subsample, early_stopping = early_stopping )
-        
-        if self.clf_name == "Bayesian Network":
-            clf = self.applyBN(save_model=save_model, learningMethod=learningMethod, prior=prior, 
-                                priorWeight=priorWeight, discretizationNbBins=discretizationNbBins, 
-                                discretizationStrategy=discretizationStrategy,usePR=usePR)
-        
+       
         if self.clf_name == "Neural Network":
             clf = self.applyNN(save_model=save_model, act_fn=act_fn, batch_size=batch_size, epochs=epochs, learning_rate=learning_rate)
         
@@ -111,42 +105,6 @@ class Classifier:
         return nn
 
 
-    ########################################################
-    # BAYESIAN NETWORK CLASSIFER
-    #
-    def applyBN(self, save_model=True, learningMethod='MIIC', prior='Smoothing', priorWeight=1, discretizationNbBins=4, discretizationStrategy="kmeans",usePR=False ):
-        
-        self.clf = BNClassifier(learningMethod=learningMethod, prior=prior, priorWeight=priorWeight, discretizationNbBins=discretizationNbBins, discretizationStrategy=discretizationStrategy,usePR=usePR)
-        self.clf.fit(self.X_train, self.Y_train)
-        
-        # evaluate model
-        self.evaluate_model( )
-
-        if save_model:
-            gum.saveBN(self.clf.bn, os.path.join(".","models", "BNC_" + self.dataset_name + ".net"))
-        
-        return self.clf
-
-    ########################################################
-    # XGBOOST CLASSIFER
-    #
-    def applyXGBoost( self, save_model = True, learning_rate=0.01, max_depth=5, n_estimators=200, 
-                      min_child_weight = 10, subsample = 0.8, early_stopping = 10 ):
-
-        # apply classifier
-        self.clf = XGBClassifier(objective ='multi:softmax', num_class = 2, learning_rate = learning_rate, max_depth = max_depth,
-                            n_estimators = n_estimators, min_child_weight = min_child_weight, subsample = subsample,
-                            early_stopping_rounds = early_stopping)
-        self.clf.fit(self.X_train, self.Y_train, eval_set=[(self.X_train, self.Y_train), (self.X_val, self.Y_val)], verbose=True)
-
-        # evaluate the model
-        self.evaluate_model( )
-
-        # save model
-        if save_model:
-            self.clf.save_model(os.path.join(".","models", "XGB_" + self.dataset_name + ".json"))
-
-        return self.clf
 
     def evaluate_model(self):
         
@@ -162,7 +120,10 @@ class Classifier:
         self.clf_results["precision"] = precision_score(self.Y_test, Y_pred)
         self.clf_results["recall"] = recall_score(self.Y_test, Y_pred)
         self.clf_results["f1"] = f1_score(self.Y_test, Y_pred)
-  
+
+        if self.clf_name == "Neural Network":
+            self.clf_results["history"] = self.history
+        
         # show perfomance
         print("Overall Performace: ")
         print("\tClassifier: " + self.clf_name)
@@ -170,6 +131,10 @@ class Classifier:
         print("\tPrecision: " + str(self.clf_results["precision"]))
         print("\tRecall: " + str(self.clf_results["recall"]))
         print("\tF1 Score: " + str(self.clf_results["f1"]))
+
+        # save results
+        with open(os.path.join("results", self.clf_name+"_RERS_" + self.dataset_name + ".pkl"), 'wb') as f:
+            pickle.dump(self.clf_results, f)
 
     def generateTrainTestValSets(self):
         
