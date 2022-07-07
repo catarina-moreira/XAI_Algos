@@ -1,12 +1,16 @@
 
 import sys
 import os
+import numpy as np
 import pandas as pd
 
 import pyAgrum as gum
 import pyAgrum.lib.notebook as gnb
 from pyAgrum.skbn import BNClassifier
 
+import tensorflow as tf
+from tensorflow import keras
+from tensorflow.keras import layers
 from keras.utils.np_utils import to_categorical
 
 from xgboost import XGBClassifier
@@ -27,13 +31,14 @@ class Classifier:
         self.dataset_name = dataset_name
         self.class_var = class_var
         self.clf_results = {}
+        self.history = None
 
         # extract feature names
         self.feature_names = dataset.columns.to_list()
         self.feature_names.remove(class_var)
 
         # generate class label
-        self.class_label = ["Y_0", "Y_1"]
+        self.class_labels = ["Y_0", "Y_1"]
 
         # genetate training files
         X_train, X_test, Y_train, Y_test, X_val, Y_val = self.generateTrainTestValSets()
@@ -48,7 +53,7 @@ class Classifier:
     def applyClassifer(self, save_model = True, learning_rate=0.01, max_depth=5, 
                         n_estimators=200, min_child_weight = 10, subsample = 0.8, early_stopping = 10, 
                         learningMethod='MIIC', prior='Smoothing', priorWeight=1, discretizationNbBins=4,
-                        discretizationStrategy="kmeans",usePR=False):
+                        discretizationStrategy="kmeans",usePR=False, act_fn = "tanh", batch_size=32, epochs=50):
         
         clf = None
         self.errorClassifierNotFOund() if self.clf_name not in self.SUPPORTED_CLFS else ""
@@ -61,14 +66,45 @@ class Classifier:
         if self.clf_name == "Bayesian Network":
             clf = self.applyBN(save_model=save_model, learningMethod=learningMethod, prior=prior, 
                                 priorWeight=priorWeight, discretizationNbBins=discretizationNbBins, 
-                                discretizationStrategy=discretizationStrategy,usePR=usePR)
+                                discretizationStrategy=discretizationStrategy,usePR=usePR, act_fn = act_fn)
         
         if self.clf_name == "Neural Network":
-            pass
-        
+            clf = self.applyNN(save_model=save_model, act_fn=act_fn, batch_size=batch_size, epochs=epochs, learning_rate=learning_rate)
         
         return clf
-            
+    
+
+    def applyNN(self,save_model, act_fn, batch_size, epochs, learning_rate):
+        
+        # define model
+        nn = self.create_nn_arch(act_fn)
+
+        # train
+        nn.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=learning_rate), loss="binary_crossentropy", metrics=["accuracy"])
+        self.history = nn.fit(self.X_train, self.Y_train, epochs=epochs, batch_size=batch_size, validation_data=(self.X_val, self.Y_val), verbose=1)
+
+        # evaluate model
+        self.evaluate_model(nn)
+
+        # save model
+        if save_model:
+            nn.save(os.path.join(".","models", "NN_" + self.dataset_name + ".json"))
+        
+        return nn
+
+    def create_nn_arch(self, act_fn):
+        nn = tf.keras.Sequential()
+        nn.add(layers.Dense(7, activation=act_fn, input_shape=(self.X_train.shape[-1],) ))
+        nn.add(layers.Dense(5, activation=act_fn ))
+        nn.add(layers.Dense(3, activation=act_fn ))
+        nn.add(layers.Dense(2, activation="softmax"))
+
+        return nn
+
+
+    ########################################################
+    # BAYESIAN NETWORK CLASSIFER
+    #
     def applyBN(self, save_model=True, learningMethod='MIIC', prior='Smoothing', priorWeight=1, discretizationNbBins=4, discretizationStrategy="kmeans",usePR=False ):
         
         bnc = BNClassifier(learningMethod=learningMethod, prior=prior, priorWeight=priorWeight, discretizationNbBins=discretizationNbBins, discretizationStrategy=discretizationStrategy,usePR=usePR)
@@ -82,6 +118,9 @@ class Classifier:
         
         return bnc
 
+    ########################################################
+    # XGBOOST CLASSIFER
+    #
     def applyXGBoost( self, save_model = True, learning_rate=0.01, max_depth=5, n_estimators=200, 
                       min_child_weight = 10, subsample = 0.8, early_stopping = 10 ):
 
@@ -101,8 +140,12 @@ class Classifier:
         return xgb
 
     def evaluate_model(self, clf):
-
+        
         Y_pred = clf.predict(self.X_test)
+
+        if self.clf_name == "Neural Network":
+            Y_pred = np.argmax(Y_pred)
+
         self.clf_results["predictions"] = Y_pred
 
         self.clf_results["accuracy"] = accuracy_score(self.Y_test, Y_pred) 
@@ -125,7 +168,7 @@ class Classifier:
 
         # need to convert to categorical representation, because ...
         if self.clf_name == "Neural Network":
-            Y = to_categorical( Y ) # LIME works with prediction probabilities which are only supported by softmax act. function in NNs
+            Y = pd.DataFrame(to_categorical( Y ), columns=self.class_labels) # LIME works with prediction probabilities which are only supported by softmax act. function in NNs
 
         X_train, X_test, Y_train, Y_test = train_test_split(X.values, Y.values, test_size=0.3, random_state=515)
         X_test, X_val, Y_test, Y_val = train_test_split(X_test, Y_test, test_size=0.5, random_state=515)
@@ -138,6 +181,12 @@ class Classifier:
         print(self.SUPPORTED_CLFS)
         return sys.exit(-1)
 
+
+    ##################################################
+    # GETTERS
+    #################################################
+    def getHistory(self):
+        return self.history
 
     def getResults(self):
         return self.clf_results
@@ -160,6 +209,9 @@ class Classifier:
     def getClassVar(self):
         return self.class_var
 
+    ##################################################
+    # sETTERS
+    #################################################
     def setClfName(self, newClfName):
         self.clf_name = newClfName
     
