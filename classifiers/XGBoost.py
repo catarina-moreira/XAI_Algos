@@ -28,9 +28,17 @@ class XGBoost( ClassifierWrapper ):
 
     # save model
     if save_model:
-      self.clf.save_model(os.path.join(".","models", "XGB_" + self.dataset_name + ".json"))
+      self.clf.save_model(os.path.join(".","models", self.clf_name.replace(" ", "") + "_" + self.dataset_name + ".json"))
 
     return self.clf
+    
+  def plot_feature_importances(self):
+    n_features = len(self.feature_names)
+    plt.barh(range(n_features), self.clf.feature_importances_, align="center")
+    plt.yticks(np.arange(n_features), self.X)
+    plt.xlabel("importance")
+    plt.ylabel("features")
+    plt.show()
   
 
 

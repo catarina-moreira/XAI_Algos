@@ -133,7 +133,7 @@ class ClassifierWrapper:
         print("\tF1 Score: " + str(self.clf_results["f1"]))
 
         # save results
-        with open(os.path.join("results", self.clf_name+"_RERS_" + self.dataset_name + ".pkl"), 'wb') as f:
+        with open(os.path.join("results", self.clf_name.replace(" ", "")+"_RES_" + self.dataset_name + ".pkl"), 'wb') as f:
             pickle.dump(self.clf_results, f)
 
     def generateTrainTestValSets(self):
