@@ -31,6 +31,7 @@ class BayesNet( ClassifierWrapper ):
     if save_model:
       gum.saveBN(self.clf.bn, os.path.join(".","models", "BNC_" + self.dataset_name + ".net"))
     
+    return self.clf
 
   def classifyNaiveBayes(self, save_model=False, learningMethod='NaiveBayes', prior='Smoothing', priorWeight=1, discretizationNbBins=4, discretizationStrategy="uniform",usePR=False):
     self.clf_name = "Naive Bayes"
