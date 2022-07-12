@@ -4,22 +4,16 @@ import os
 import numpy as np
 import pandas as pd
 
-import pyAgrum as gum
-import pyAgrum.lib.notebook as gnb
-from pyAgrum.skbn import BNClassifier
-
-import tensorflow as tf
-from tensorflow import keras
-from tensorflow.keras import layers
-from keras.utils.np_utils import to_categorical
+import matplotlib.pyplot as plt
+from matplotlib.colors import ListedColormap
 
 import pickle
 
-from xgboost import XGBClassifier
 
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score, precision_score
-from sklearn.metrics import recall_score, f1_score, confusion_matrix
+from sklearn.metrics import recall_score, f1_score, confusion_matrix, roc_auc_score
+from keras.utils.np_utils import to_categorical
 
 # for binary classification only
 class ClassifierWrapper:
@@ -36,6 +30,9 @@ class ClassifierWrapper:
         self.class_var = class_var
         self.clf_results = {}
         self.history = None
+        self.X = None
+        self.y = None
+        self.Y = None
 
         # extract feature names
         self.feature_names = dataset.columns.to_list()
@@ -54,57 +51,10 @@ class ClassifierWrapper:
         self.X_val = X_val
         self.Y_val = Y_val
 
-        # load a pretrained model
-        if load_model:
-            self.clf = self.load_pretrained_model()
 
-    def load_pretrained_model( ):
+        
+    def applyClassifer(self):
         pass
-        
-
-    def applyClassifer(self, save_model = True, learning_rate=0.01, max_depth=5, 
-                        n_estimators=200, min_child_weight = 10, subsample = 0.8, early_stopping = 10, 
-                        learningMethod='MIIC', prior='Smoothing', priorWeight=1, discretizationNbBins=4,
-                        discretizationStrategy="kmeans",usePR=False, act_fn = "tanh", batch_size=32, epochs=50):
-        
-        clf = None
-        self.errorClassifierNotFOund() if self.clf_name not in self.SUPPORTED_CLFS else ""
-
-       
-        if self.clf_name == "Neural Network":
-            clf = self.applyNN(save_model=save_model, act_fn=act_fn, batch_size=batch_size, epochs=epochs, learning_rate=learning_rate)
-        
-        return clf
-    
-
-    def applyNN(self,save_model, act_fn, batch_size, epochs, learning_rate):
-        
-        # define model
-        self.clf = self.create_nn_arch(act_fn)
-
-        # train
-        self.clf.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=learning_rate), loss="binary_crossentropy", metrics=["accuracy"])
-        self.history = self.clf.fit(self.X_train, self.Y_train, epochs=epochs, batch_size=batch_size, validation_data=(self.X_val, self.Y_val), verbose=1)
-
-        # evaluate model
-        self.evaluate_model( )
-
-        # save model
-        if save_model:
-            self.clf.save(os.path.join(".","models", "NN_" + self.dataset_name + ".json"))
-        
-        return self.clf
-
-    def create_nn_arch(self, act_fn):
-        nn = tf.keras.Sequential()
-        nn.add(layers.Dense(7, activation=act_fn, input_shape=(self.X_train.shape[-1],) ))
-        nn.add(layers.Dense(5, activation=act_fn ))
-        nn.add(layers.Dense(3, activation=act_fn ))
-        nn.add(layers.Dense(2, activation="softmax"))
-
-        return nn
-
-
 
     def evaluate_model(self):
         
@@ -120,6 +70,8 @@ class ClassifierWrapper:
         self.clf_results["precision"] = precision_score(self.Y_test, Y_pred)
         self.clf_results["recall"] = recall_score(self.Y_test, Y_pred)
         self.clf_results["f1"] = f1_score(self.Y_test, Y_pred)
+        self.clf_results["roc_auc_score"] = roc_auc_score(self.Y_test, Y_pred)
+        self.clf_results["confusion_matrix"] = confusion_matrix(self.Y_test, Y_pred)
 
         if self.clf_name == "Neural Network":
             self.clf_results["history"] = self.history
@@ -131,6 +83,7 @@ class ClassifierWrapper:
         print("\tPrecision: " + str(self.clf_results["precision"]))
         print("\tRecall: " + str(self.clf_results["recall"]))
         print("\tF1 Score: " + str(self.clf_results["f1"]))
+        print("\tROC AUC Score: " + str(self.clf_results["roc_auc_score"]) )
 
         # save results
         with open(os.path.join("results", self.clf_name.replace(" ", "")+"_RES_" + self.dataset_name + ".pkl"), 'wb') as f:
@@ -138,18 +91,62 @@ class ClassifierWrapper:
 
     def generateTrainTestValSets(self):
         
-        X = self.dataset[self.feature_names]
-        Y = self.dataset[self.class_var]
+        self.X = self.dataset[self.feature_names]
+        self.y = self.dataset[self.class_var] # keeping a copy of the original labels. it will be handy for later
+        self.Y = self.dataset[self.class_var]
 
         # need to convert to categorical representation, because ...
         if self.clf_name == "Neural Network":
-            Y = pd.DataFrame(to_categorical( Y ), columns=self.class_labels) # LIME works with prediction probabilities which are only supported by softmax act. function in NNs
+            self.Y = pd.DataFrame(to_categorical( self.Y ), columns=self.class_labels) # LIME works with prediction probabilities which are only supported by softmax act. function in NNs
 
-        X_train, X_test, Y_train, Y_test = train_test_split(X.values, Y.values, test_size=0.3, random_state=515)
+        X_train, X_test, Y_train, Y_test = train_test_split(self.X.values, self.Y.values, test_size=0.3, random_state=515)
         X_test, X_val, Y_test, Y_val = train_test_split(X_test, Y_test, test_size=0.5, random_state=515)
 
         return X_train, X_test, Y_train, Y_test, X_val, Y_val
         
+
+    def plot_decision_boundary(self, colormap = plt.cm.RdBu):
+
+        h = .02  # step size in the mesh
+        fs=6
+
+        x_min, x_max = self.X.iloc[:, 0].values.min() - .1, (self.X.iloc[:, 0].values).max() + .1
+        y_min, y_max = self.X.iloc[:, 1].values.min() - .1, self.X.iloc[:, 1].values.max() + .1
+        xx, yy = np.meshgrid(np.arange(x_min, x_max, h), np.arange(y_min, y_max, h))
+
+        # just plot the dataset first
+        cm = colormap
+        cm_bright = ListedColormap(['#FF0000', '#0000FF'])
+        ax = plt.subplot(1, 1, 1)
+
+        if(self.clf_name == "Neural Network"):
+            Z = np.array( list( map(np.argmax, self.clf.predict(np.c_[xx.ravel(), yy.ravel()]))))
+        else:
+            Z = self.clf.predict(np.c_[xx.ravel(), yy.ravel()])
+
+        # Put the result into a color plot
+        Z = Z.reshape(xx.shape)
+        ax.contourf(xx, yy, Z, cmap=cm, alpha=.7)
+
+        # Plot the training points
+        if self.clf_name == "Neural Network":
+            ax.scatter(self.X_train[:, 0], self.X_train[:, 1], c=np.array(list(map(np.argmax, self.Y_train))), cmap=cm_bright, edgecolors='k', alpha=0.2,marker='.')
+            ax.scatter(self.X_test[:, 0], self.X_test[:, 1], c=np.array(list(map(np.argmax, self.Y_test))), cmap=cm_bright, edgecolors='k',marker='.')
+        else:
+            ax.scatter(self.X_train[:, 0], self.X_train[:, 1], c=self.Y_train, cmap=cm_bright, edgecolors='k', alpha=0.2,marker='.')
+            ax.scatter(self.X_test[:, 0], self.X_test[:, 1], c=self.Y_test, cmap=cm_bright, edgecolors='k',marker='.')
+
+        ax.set_xlim(xx.min(), xx.max())
+        ax.set_ylim(yy.min(), yy.max())
+        ax.set_xticks(())
+        ax.set_yticks(())
+
+        plt.tight_layout()
+        plt.show()
+
+
+
+
 
     def errorClassifierNotFOund(self):
         print("[ERROR] Classifier " + self.clf_name + {" is not supported. Please try one of the following:"})

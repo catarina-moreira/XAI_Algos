@@ -13,10 +13,16 @@ import pyAgrum.lib.explain as expl
 from pyAgrum.lib.bn2graph import BN2dot
 from pyAgrum.lib.bn2roc import showROC, showPR, showROC_PR
 
+import pickle
+
 class BayesNet( ClassifierWrapper ):
 
   def __init__(self, load_model : bool, dataset_name : str, dataset : pd.DataFrame , class_var : str):
     super().__init__(load_model, "Bayesian Network", dataset_name, dataset, class_var)
+
+    if load_model:
+      self.clf = pickle.load(open(os.path.join(".","models", "BNC_" + self.dataset_name + ".json"), 'rb'))
+      self.clf.bn = gum.loadBN(os.path.join(".","models", "BNC_" + self.dataset_name + ".net"))
 
   def classify(self, save_model=False, learningMethod='MIIC', prior='Smoothing', priorWeight=1, discretizationNbBins=4, discretizationStrategy="uniform",usePR=False):
     # learningMethod: A string designating which type of learning we want to use. Possible values are: 
@@ -30,7 +36,8 @@ class BayesNet( ClassifierWrapper ):
     
     if save_model:
       gum.saveBN(self.clf.bn, os.path.join(".","models", "BNC_" + self.dataset_name + ".net"))
-    
+    #  pickle.dump(self.clf, open(os.path.join(".","models", "BNC_" + self.dataset_name + ".json"), 'wb'))
+
     return self.clf
 
   def classifyNaiveBayes(self, save_model=False, learningMethod='NaiveBayes', prior='Smoothing', priorWeight=1, discretizationNbBins=4, discretizationStrategy="uniform",usePR=False):

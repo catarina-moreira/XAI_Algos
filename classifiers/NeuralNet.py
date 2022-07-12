@@ -9,12 +9,15 @@ import matplotlib.pyplot as plt
 import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras import layers
-from keras.utils.np_utils import to_categorical
+
 
 class NeuralNetwork( ClassifierWrapper ):
   
   def __init__(self, load_model : bool, dataset_name : str, dataset : pd.DataFrame , class_var : str):
     super().__init__(load_model, "Neural Network", dataset_name, dataset, class_var)
+
+    if load_model:
+      self.clf = keras.models.load_model(os.path.join(".","models", "NN_" + self.dataset_name + ".json"))
 
   def classify(self,save_model = False, act_fn="tanh", batch_size=32, epochs=50, learning_rate=0.01):
     
