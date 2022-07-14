@@ -23,6 +23,7 @@ class BayesNet( ClassifierWrapper ):
     if load_model:
       self.clf = pickle.load(open(os.path.join(".","models", "BNC_" + self.dataset_name + ".json"), 'rb'))
       self.clf.bn = gum.loadBN(os.path.join(".","models", "BNC_" + self.dataset_name + ".net"))
+      
 
   def classify(self, save_model=False, learningMethod='MIIC', prior='Smoothing', priorWeight=1, discretizationNbBins=4, discretizationStrategy="uniform",usePR=False):
     # learningMethod: A string designating which type of learning we want to use. Possible values are: 

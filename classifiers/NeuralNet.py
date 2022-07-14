@@ -9,6 +9,7 @@ import matplotlib.pyplot as plt
 import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras import layers
+import pickle
 
 
 class NeuralNetwork( ClassifierWrapper ):
@@ -17,7 +18,9 @@ class NeuralNetwork( ClassifierWrapper ):
     super().__init__(load_model, "Neural Network", dataset_name, dataset, class_var)
 
     if load_model:
-      self.clf = keras.models.load_model(os.path.join(".","models", "NN_" + self.dataset_name + ".json"))
+      self.clf = tf.keras.models.load_model(os.path.join(".","models", "NN_" + self.dataset_name + ".json"))
+      with open(os.path.join("results", self.clf_name.replace(" ", "")+"_RES_" + self.dataset_name + ".pkl"), 'rb') as f:
+        self.clf_results = pickle.load(f)
 
   def classify(self,save_model = False, act_fn="tanh", batch_size=32, epochs=50, learning_rate=0.01):
     

@@ -29,10 +29,8 @@ class ClassifierWrapper:
         self.dataset_name = dataset_name
         self.class_var = class_var
         self.clf_results = {}
-        self.history = None
-        self.X = None
-        self.y = None
-        self.Y = None
+        
+        self.history,self.X, self.y,self.Y = None, None, None, None
 
         # extract feature names
         self.feature_names = dataset.columns.to_list()
@@ -42,15 +40,7 @@ class ClassifierWrapper:
         self.class_labels = ["Y_0", "Y_1"]
 
         # genetate training files
-        X_train, X_test, Y_train, Y_test, X_val, Y_val = self.generateTrainTestValSets()
-
-        self.X_train = X_train
-        self.Y_train = Y_train
-        self.X_test = X_test
-        self.Y_test = Y_test
-        self.X_val = X_val
-        self.Y_val = Y_val
-
+        self.generateTrainTestValSets()
 
         
     def applyClassifer(self):
@@ -99,50 +89,59 @@ class ClassifierWrapper:
         if self.clf_name == "Neural Network":
             self.Y = pd.DataFrame(to_categorical( self.Y ), columns=self.class_labels) # LIME works with prediction probabilities which are only supported by softmax act. function in NNs
 
-        X_train, X_test, Y_train, Y_test = train_test_split(self.X.values, self.Y.values, test_size=0.3, random_state=515)
-        X_test, X_val, Y_test, Y_val = train_test_split(X_test, Y_test, test_size=0.5, random_state=515)
-
-        return X_train, X_test, Y_train, Y_test, X_val, Y_val
+        self.X_train, self.X_test, self.Y_train, self.Y_test = train_test_split(self.X.values, self.Y.values, test_size=0.3, random_state=515)
+        self.X_test, self.X_val, self.Y_test, self.Y_val = train_test_split(self.X_test, self.Y_test, test_size=0.5, random_state=515)
         
 
-    def plot_decision_boundary(self, colormap = plt.cm.RdBu):
+    def plot_decision_boundary(self, figsize=list([5, 5]), colormap = plt.cm.RdBu):
 
         h = .02  # step size in the mesh
         fs=6
+        
+        data_0 = self.dataset[self.class_var == 0]
+        data_1 = self.dataset[self.class_var == 0]
 
-        x_min, x_max = self.X.iloc[:, 0].values.min() - .1, (self.X.iloc[:, 0].values).max() + .1
-        y_min, y_max = self.X.iloc[:, 1].values.min() - .1, self.X.iloc[:, 1].values.max() + .1
-        xx, yy = np.meshgrid(np.arange(x_min, x_max, h), np.arange(y_min, y_max, h))
+        plt.figure(figsize=(4, 4))
+        plt.scatter(data_0[:, 0], data_0[:, 1], edgecolor="#333", label="Class 0")
+        plt.scatter(data_1[:, 0], data_1[:, 1], edgecolor="#333", label="Class 1")
+        plt.title("Dataset samples")
+        plt.ylabel(r"$x_2$")
+        plt.xlabel(r"$x_1$")
+        plt.legend()
+
+        #x_min, x_max = self.X.iloc[:, 0].values.min() - .1, (self.X.iloc[:, 0].values).max() + .1
+        #y_min, y_max = self.X.iloc[:, 1].values.min() - .1, self.X.iloc[:, 1].values.max() + .1
+        #xx, yy = np.meshgrid(np.arange(x_min, x_max, h), np.arange(y_min, y_max, h))
 
         # just plot the dataset first
-        cm = colormap
-        cm_bright = ListedColormap(['#FF0000', '#0000FF'])
-        ax = plt.subplot(1, 1, 1)
+        #cm = colormap
+        #cm_bright = ListedColormap(['#FF0000', '#0000FF'])
+        #ax = plt.subplots(1, 1, figsize=figsize )
 
-        if(self.clf_name == "Neural Network"):
-            Z = np.array( list( map(np.argmax, self.clf.predict(np.c_[xx.ravel(), yy.ravel()]))))
-        else:
-            Z = self.clf.predict(np.c_[xx.ravel(), yy.ravel()])
+        #if(self.clf_name == "Neural Network"):
+        #    Z = np.array( list( map(np.argmax, self.clf.predict(np.c_[xx.ravel(), yy.ravel()]))))
+        #else:
+        #    Z = self.clf.predict(np.c_[xx.ravel(), yy.ravel()])
 
         # Put the result into a color plot
-        Z = Z.reshape(xx.shape)
-        ax.contourf(xx, yy, Z, cmap=cm, alpha=.7)
+        #Z = Z.reshape(xx.shape)
+        #ax.contourf(xx, yy, Z, cmap=cm, alpha=.7)
 
         # Plot the training points
-        if self.clf_name == "Neural Network":
-            ax.scatter(self.X_train[:, 0], self.X_train[:, 1], c=np.array(list(map(np.argmax, self.Y_train))), cmap=cm_bright, edgecolors='k', alpha=0.2,marker='.')
-            ax.scatter(self.X_test[:, 0], self.X_test[:, 1], c=np.array(list(map(np.argmax, self.Y_test))), cmap=cm_bright, edgecolors='k',marker='.')
-        else:
-            ax.scatter(self.X_train[:, 0], self.X_train[:, 1], c=self.Y_train, cmap=cm_bright, edgecolors='k', alpha=0.2,marker='.')
-            ax.scatter(self.X_test[:, 0], self.X_test[:, 1], c=self.Y_test, cmap=cm_bright, edgecolors='k',marker='.')
+        #if self.clf_name == "Neural Network":
+        #    ax.scatter(self.X_train[:, 0], self.X_train[:, 1], c=np.array(list(map(np.argmax, self.Y_train))), cmap=cm_bright, edgecolors='k', alpha=0.2,marker='.')
+        #    ax.scatter(self.X_test[:, 0], self.X_test[:, 1], c=np.array(list(map(np.argmax, self.Y_test))), cmap=cm_bright, edgecolors='k',marker='.')
+        #else:
+        #    ax.scatter(self.X_train[:, 0], self.X_train[:, 1], c=self.Y_train, cmap=cm_bright, edgecolors='k', alpha=0.2,marker='.')
+        #    ax.scatter(self.X_test[:, 0], self.X_test[:, 1], c=self.Y_test, cmap=cm_bright, edgecolors='k',marker='.')
 
-        ax.set_xlim(xx.min(), xx.max())
-        ax.set_ylim(yy.min(), yy.max())
-        ax.set_xticks(())
-        ax.set_yticks(())
+        #ax.set_xlim(xx.min(), xx.max())
+        #ax.set_ylim(yy.min(), yy.max())
+        #ax.set_xticks(())
+        #ax.set_yticks(())
 
-        plt.tight_layout()
-        plt.show()
+        #plt.tight_layout()
+        #plt.show()
 
 
 

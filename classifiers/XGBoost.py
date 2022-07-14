@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 
 from xgboost import XGBClassifier
 
+import pickle
 
 class XGBoost( ClassifierWrapper ):
 
@@ -17,6 +18,9 @@ class XGBoost( ClassifierWrapper ):
     if load_model:
       self.clf = XGBClassifier()
       self.clf.load_model(os.path.join(".","models", self.clf_name.replace(" ", "") + "_" + self.dataset_name + ".json"))
+      with open(os.path.join("results", self.clf_name.replace(" ", "")+"_RES_" + self.dataset_name + ".pkl"), 'rb') as f:
+        self.clf_results = pickle.load(f)
+
 
   def classify(self, save_model = False, learning_rate=0.01, max_depth=5, n_estimators=200, 
                            min_child_weight = 10, subsample = 0.8, early_stopping = 10):
