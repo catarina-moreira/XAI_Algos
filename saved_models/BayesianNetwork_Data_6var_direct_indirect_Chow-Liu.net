@@ -1,0 +1,90 @@
+
+net {
+  name = unnamedBN;
+  software = "aGrUM 1.2.0";
+  node_size = (50 50);
+}
+
+node y {
+   states = (0 1 );
+   label = "y";
+   ID = "y";
+}
+
+node x0 {
+   states = (0 1 );
+   label = "x0";
+   ID = "x0";
+}
+
+node x1 {
+   states = (0 1 );
+   label = "x1";
+   ID = "x1";
+}
+
+node x2 {
+   states = (0 1 );
+   label = "x2";
+   ID = "x2";
+}
+
+node x3 {
+   states = (0 1 2 3 4 );
+   label = "x3";
+   ID = "x3";
+}
+
+node x4 {
+   states = (0 1 );
+   label = "x4";
+   ID = "x4";
+}
+
+node x5 {
+   states = (0 1 );
+   label = "x5";
+   ID = "x5";
+}
+
+potential (y) {
+   data = (  0.430433 0.569567);
+}
+
+potential ( x0 | x1   ) {
+   data = 
+   ((   0.401183   0.598817)   % x1=0   
+   (   0.700658   0.299342));   % x1=1   
+}
+
+potential ( x1 | x5   ) {
+   data = 
+   ((   0.374991   0.625009)   % x5=0   
+   (   0.713594   0.286406));   % x5=1   
+}
+
+potential ( x2 | x5   ) {
+   data = 
+   ((   0.593103   0.406897)   % x5=0   
+   (   0.735823   0.264177));   % x5=1   
+}
+
+potential ( x3 | x0   ) {
+   data = 
+   ((   0.0643104   0.196336   0.291559   0.286857   0.160938)   % x0=0   
+   (   0.205259   0.261238   0.143887   0.233854   0.155762));   % x0=1   
+}
+
+potential ( x4 | y   ) {
+   data = 
+   ((   0.732594   0.267406)   % y=0   
+   (   0.678186   0.321814));   % y=1   
+}
+
+potential ( x5 | y   ) {
+   data = 
+   ((   0.28579   0.71421)   % y=0   
+   (   0.504038   0.495962));   % y=1   
+}
+
+

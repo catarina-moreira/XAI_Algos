@@ -1,0 +1,42 @@
+
+net {
+  name = unnamedBN;
+  software = "aGrUM 1.2.0";
+  node_size = (50 50);
+}
+
+node y {
+   states = (0 1 );
+   label = "y";
+   ID = "y";
+}
+
+node x0 {
+   states = (0 1 );
+   label = "x0";
+   ID = "x0";
+}
+
+node x1 {
+   states = (0 1 );
+   label = "x1";
+   ID = "x1";
+}
+
+potential (y) {
+   data = (  0.500971 0.499029);
+}
+
+potential ( x0 | y   ) {
+   data = 
+   ((   0.576813   0.423187)   % y=0   
+   (   0.572647   0.427353));   % y=1   
+}
+
+potential ( x1 | y   ) {
+   data = 
+   ((   0.675582   0.324418)   % y=0   
+   (   0.679013   0.320987));   % y=1   
+}
+
+
