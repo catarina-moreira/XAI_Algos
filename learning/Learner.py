@@ -46,14 +46,18 @@ class Learner(ABC):
         self.modelPath = None
         self.decisionBoundary = None
         self.debug = None
-    
-    def plot_decision_boundary(self, figsize = (5,4), dpi = 120, size = 40, cmap = plt.cm.RdYlBu ): 
-        x_min, x_max = self.data.X.iloc[:, 0].min() - 0.1, self.data.X.iloc[:,0].max() + 0.1
-        y_min, y_max = self.data.X.iloc[:, 1].min() - 0.1, self.data.X.iloc[:, 1].max() + 0.1
 
-        xx, yy = np.meshgrid(np.linspace(x_min,x_max, 100),np.linspace(y_min,y_max, 100))
+    def plot_decision_boundary(self, flag=False, figsize = (5,4), dpi = 150, size = 40, step=0.1, cmap = plt.cm.RdYlBu ): 
+        x_min, x_max = self.data.X.iloc[:, 0].min() - step, self.data.X.iloc[:,0].max() + step
+        y_min, y_max = self.data.X.iloc[:, 1].min() - step, self.data.X.iloc[:, 1].max() + step
+
+        xx, yy = np.meshgrid(np.arange(x_min, x_max, 0.1), np.arange(y_min, y_max, 0.1))
         x_in = np.c_[xx.ravel(), yy.ravel()]
-        
+
+        if flag:
+            col = np.zeros( (len(x_in) ,1))
+            x_in = np.concatenate([x_in, col], axis=1)
+
         self.debug = x_in
         y_pred = self.clf.predict_proba(x_in)[:,1]
         y_pred = np.round(y_pred).reshape(xx.shape)
@@ -61,7 +65,8 @@ class Learner(ABC):
         fig = Figure(figsize=figsize, dpi=dpi) 
         ax = (fig.subplots(1, 1, sharex=True, sharey=True))
         ax.contourf(xx, yy, y_pred, cmap=cmap, alpha=0.7 )
-        ax.scatter(self.data.X.iloc[:,0], self.data.X.iloc[:, 1], c=self.data.Y, s=size, cmap=cmap)
+        ax.scatter(self.Xtest[:,0], self.Xtest[:, 1], c=self.Ytest, s=size,alpha=0.6, cmap=cmap, marker=".")
+        
         ax.set_xlim(xx.min(), xx.max())
         ax.set_ylim(yy.min(), yy.max())
 
@@ -70,7 +75,7 @@ class Learner(ABC):
         ax.set_title( self.clf_name + " | Dataset: " + self.data.dataset_name + "\nPrecision: " + str(self.clf_results["precision"]) + " | Recall: " + str(self.clf_results["recall"]))
 
         self.decisionBoundary = os.path.join(".", "tmp", "networks", self.clf_name + "_" + self.data.dataset_name + ".png") 
-        fig.savefig(self.decisionBoundary, dpi=150 )
+        fig.savefig(self.decisionBoundary, dpi=dpi )
 
         return fig
         

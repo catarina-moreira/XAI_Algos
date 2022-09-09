@@ -11,7 +11,7 @@ import matplotlib.patches as mpatches
 from sklearn.decomposition import PCA, KernelPCA
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split
-from .util import retrieve_n_class_color_cubic
+from .util.aux_functions import retrieve_n_class_color_cubic
 
 
 def plot_decision_boundary(model, dim_red_method='pca',

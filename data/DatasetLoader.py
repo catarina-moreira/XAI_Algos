@@ -35,6 +35,11 @@ class Dataset():
 
 		self.feature_names = self.X.columns.tolist()
 		self.numFeatures = len(self.feature_names)
+
+		self.correlation_mat = None
+		self.correlation_img = None
+
+		self.dataset_viz_img = None
 	
 	# VISUALIZE DATA
 	def visualize_data2D(self, figsize=(4,4), scatter_size = 2, savefig=True) -> None:
@@ -52,27 +57,28 @@ class Dataset():
 		plt.grid(False)
 
 		if savefig:
-			plt.savefig( os.path.join("tmp", "data", self.dataset_name + "_dataset.png"), dpi = 150) 
+			self.dataset_viz_img = os.path.join("tmp", "data", self.dataset_name + "_dataset.png")
+			plt.savefig( self.dataset_viz_img, dpi = 150) 
 
 	def correlation_matrix(self, figsize = (4,4), cmap = 'RdBu', savefig=True, text_size = 8):
-		corr_matrix = self.dataset.corr()
-		mask = np.zeros_like(corr_matrix, dtype=np.bool)
+		self.correlation_mat = self.dataset.corr()
+		mask = np.zeros_like(self.correlation_mat, dtype=np.bool)
 		mask[np.triu_indices_from(mask)]= True
 		
 		f, ax = plt.subplots(figsize=figsize) 
 		sns.set_style("white")
-		heatmap = sns.heatmap(corr_matrix, mask = mask, square = True, linewidths = .5,cbar_kws={"shrink": .9},
+		heatmap = sns.heatmap(self.correlation_mat, mask = mask, square = True, linewidths = .5,cbar_kws={"shrink": .9},
                       cmap = cmap, vmin = -1,  vmax = 1, annot = True, annot_kws = {"size": text_size})
 
-		ax.set_yticklabels(corr_matrix.columns, rotation = 0)
-		ax.set_xticklabels(corr_matrix.columns)
+		ax.set_yticklabels(self.correlation_mat.columns, rotation = 0)
+		ax.set_xticklabels(self.correlation_mat.columns)
 		sns.set_style({'xtick.bottom': True}, {'ytick.left': True})
 
 		if savefig:
-			plt.savefig( os.path.join("tmp", "corr", self.dataset_name + "_corr.png"), dpi = 150) 
+			self.correlation_img =  os.path.join("tmp", "corr", self.dataset_name + "_corr.png")
+			plt.savefig(self.correlation_img, dpi = 150) 
 
-		return corr_matrix, heatmap
-		
+		return ax		
 
 	# GETTERS and SETTERS --------------------------------------
 	def setDataset_name(self, aDataset_name : str):
